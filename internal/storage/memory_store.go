@@ -19,6 +19,7 @@ func NewMemoryStore() *MemoryStore {
 func (m *MemoryStore) Get(userID string) []models.Asset {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
 	assets := make([]models.Asset, len(m.store[userID]))
 	copy(assets, m.store[userID])
 	return assets
@@ -27,6 +28,7 @@ func (m *MemoryStore) Get(userID string) []models.Asset {
 func (m *MemoryStore) Add(userID string, asset models.Asset) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.store[userID] = append(m.store[userID], asset)
 }
 
