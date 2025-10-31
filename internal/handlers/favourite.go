@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	services "favouritesApp/internal/favourite"
 	"favouritesApp/internal/models"
+	services "favouritesApp/internal/services/favourite"
 
 	"github.com/gorilla/mux"
 )

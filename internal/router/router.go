@@ -1,8 +1,8 @@
 package router
 
 import (
-	services "favouritesApp/internal/favourite"
 	"favouritesApp/internal/handlers"
+	services "favouritesApp/internal/services/favourite"
 	"favouritesApp/internal/storage"
 	"net/http"
 

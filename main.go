@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	services "favouritesApp/internal/favourite"
 	"favouritesApp/internal/handlers"
+	services "favouritesApp/internal/services/favourite"
 	"favouritesApp/internal/storage"
 
 	"github.com/gorilla/mux"
