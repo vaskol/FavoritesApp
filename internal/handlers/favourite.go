@@ -28,10 +28,19 @@ func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) 
 	userID := vars["userId"]
 	assetID := vars["assetId"]
 
-	if !h.service.AddFavourite(userID, assetID) {
-		http.Error(w, "Asset not found", http.StatusNotFound)
+	var body struct {
+		AssetType string `json:"asset_type"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	if !h.service.AddFavourite(userID, assetID, body.AssetType) {
+		http.Error(w, "Could not add favourite", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
 }
 

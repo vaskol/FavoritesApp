@@ -6,16 +6,16 @@ import (
 	"net/http"
 
 	"assetsApp/internal/models"
-	services "assetsApp/internal/services/asset"
+	assetServices "assetsApp/internal/services/asset"
 
 	"github.com/gorilla/mux"
 )
 
 type AssetHandler struct {
-	service *services.AssetService
+	service *assetServices.AssetService
 }
 
-func NewAssetHandler(service *services.AssetService) *AssetHandler {
+func NewAssetHandler(service *assetServices.AssetService) *AssetHandler {
 	return &AssetHandler{service: service}
 }
 
@@ -31,7 +31,6 @@ func (h *AssetHandler) AddAsset(w http.ResponseWriter, r *http.Request) {
 	userID := mux.Vars(r)["userId"]
 	log.Printf("AddAsset called for user %s", userID)
 
-	// Simple approach: decode into a map to detect type
 	var body map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

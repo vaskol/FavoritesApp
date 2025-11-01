@@ -77,17 +77,18 @@ func (m *MemoryStore) EditDescription(userID, assetID, desc string) bool {
 	}
 	return false
 }
-func (m *MemoryStore) AddFavourite(userID, assetID string) {
+func (m *MemoryStore) AddFavourite(userID, assetID, assetType string) bool {
 	log.Printf("Storage: AddFavourite called for user %s, asset %s", userID, assetID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for _, fav := range m.favourites[userID] {
 		if fav == assetID {
-			return // already exists
+			return false // already exists
 		}
 	}
 	m.favourites[userID] = append(m.favourites[userID], assetID)
+	return true
 }
 
 func (m *MemoryStore) RemoveFavourite(userID, assetID string) bool {

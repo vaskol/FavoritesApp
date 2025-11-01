@@ -1,4 +1,4 @@
-package services
+package assetServices
 
 import (
 	"log"
@@ -8,10 +8,10 @@ import (
 )
 
 type AssetService struct {
-	store *storage.MemoryStore
+	store storage.AssetStore
 }
 
-func NewAssetService(store *storage.MemoryStore) *AssetService {
+func NewAssetService(store storage.AssetStore) *AssetService {
 	return &AssetService{store: store}
 }
 
@@ -30,7 +30,7 @@ func (s *AssetService) RemoveAsset(userID, assetID string) bool {
 	return s.store.Remove(userID, assetID)
 }
 
-func (s *AssetService) EditDescription(userID, assetID, newDesc string) bool {
+func (s *AssetService) EditDescription(userID, assetID, description string) bool {
 	log.Printf("Service: EditDescription called for user %s, asset %s", userID, assetID)
-	return s.store.EditDescription(userID, assetID, newDesc)
+	return s.store.EditDescription(userID, assetID, description)
 }
