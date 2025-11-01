@@ -49,38 +49,44 @@ func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) 
 
 	switch assetType {
 	case "chart":
-		attributes := []models.ChartData{}
-		if d, ok := body["attributes"].([]interface{}); ok {
+		data := []models.ChartData{}
+		if d, ok := body["data"].([]interface{}); ok {
 			for _, item := range d {
 				m := item.(map[string]interface{})
-				attributes = append(attributes, models.ChartData{
+				data = append(data, models.ChartData{
 					DatapointCode: m["datapoint_code"].(string),
-					NamespaceCode: m["namespace_code"].(string),
-					QuestionCode:  m["question_code"].(string),
-					SuffixCode:    m["suffix_code"].(string),
+					Value:         m["value"].(float64),
 				})
 			}
 		}
 		a := &models.Chart{
 			ID:          body["id"].(string),
-			Name:        body["name"].(string),
+			Title:       body["title"].(string),
 			Description: body["description"].(string),
-			Attributes:  attributes,
+			XAxisTitle:  body["x_axis_title"].(string),
+			YAxisTitle:  body["y_axis_title"].(string),
+			Data:        data,
 		}
 		asset = a
+
 	case "insight":
 		a := &models.Insight{
 			ID:          body["id"].(string),
 			Description: body["description"].(string),
 		}
 		asset = a
+
 	case "audience":
 		a := &models.Audience{
 			ID:          body["id"].(string),
-			Name:        body["name"].(string),
-			Description: body["description"].(string),
+			Gender:      body["gender"].(string),
+			Country:     body["country"].(string),
+			AgeGroup:    body["age_group"].(string),
+			SocialHours: int(body["social_hours"].(float64)),
+			Purchases:   int(body["purchases"].(float64)),
 		}
 		asset = a
+
 	default:
 		http.Error(w, "Unknown asset type", http.StatusBadRequest)
 		return

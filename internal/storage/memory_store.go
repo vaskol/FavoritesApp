@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"log"
 	"favouritesApp/internal/models"
+	"log"
 	"sync"
 )
 
@@ -31,7 +31,13 @@ func (m *MemoryStore) Add(userID string, asset models.Asset) {
 	log.Printf("Storage: Add called for user %s", userID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
+	for _, a := range m.store[userID] {
+		if a.GetID() == asset.GetID() {
+			log.Printf("Storage: Add called for user %s, asset %s already exists", userID, asset.GetID())
+			// already exists, ignore or return an error
+			return
+		}
+	}
 	m.store[userID] = append(m.store[userID], asset)
 }
 
