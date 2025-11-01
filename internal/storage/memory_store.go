@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"favouritesApp/internal/models"
+	"assetsApp/internal/models"
 	"log"
 	"sync"
 )

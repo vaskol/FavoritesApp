@@ -1,12 +1,11 @@
 package main
 
 import (
+	"assetsApp/internal/handlers"
+	assetServices "assetsApp/internal/services/asset"
+	"assetsApp/internal/storage"
 	"log"
 	"net/http"
-
-	"favouritesApp/internal/handlers"
-	services "favouritesApp/internal/services/favourite"
-	"favouritesApp/internal/storage"
 
 	"github.com/gorilla/mux"
 )
@@ -14,14 +13,18 @@ import (
 func main() {
 	log.Println("Starting the application...")
 	store := storage.NewMemoryStore()
-	service := services.NewFavouriteService(store)
-	handler := handlers.NewFavouriteHandler(service)
+
+	// Asset related initializations
+	assetService := assetServices.NewAssetService(store)
+	assetHandler := handlers.NewAssetHandler(assetService)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/users/{userId}/favourites", handler.GetFavourites).Methods("GET")
-	r.HandleFunc("/users/{userId}/favourites", handler.AddFavourite).Methods("POST")
-	r.HandleFunc("/users/{userId}/favourites/{assetId}", handler.EditFavourite).Methods("PUT")
-	r.HandleFunc("/users/{userId}/favourites/{assetId}", handler.RemoveFavourite).Methods("DELETE")
+
+	// Asset routes
+	r.HandleFunc("/users/{userId}/assets", assetHandler.GetAssets).Methods("GET")
+	r.HandleFunc("/users/{userId}/assets", assetHandler.AddAsset).Methods("POST")
+	r.HandleFunc("/users/{userId}/assets/{assetId}", assetHandler.EditAsset).Methods("PUT")
+	r.HandleFunc("/users/{userId}/assets/{assetId}", assetHandler.RemoveAsset).Methods("DELETE")
 
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
