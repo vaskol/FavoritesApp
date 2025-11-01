@@ -7,13 +7,15 @@ import (
 )
 
 type MemoryStore struct {
-	mu    sync.RWMutex
-	store map[string][]models.Asset
+	mu         sync.RWMutex
+	store      map[string][]models.Asset
+	favourites map[string][]string
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		store: make(map[string][]models.Asset),
+		store:      make(map[string][]models.Asset),
+		favourites: make(map[string][]string),
 	}
 }
 
@@ -74,4 +76,48 @@ func (m *MemoryStore) EditDescription(userID, assetID, desc string) bool {
 		}
 	}
 	return false
+}
+func (m *MemoryStore) AddFavourite(userID, assetID string) {
+	log.Printf("Storage: AddFavourite called for user %s, asset %s", userID, assetID)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, fav := range m.favourites[userID] {
+		if fav == assetID {
+			return // already exists
+		}
+	}
+	m.favourites[userID] = append(m.favourites[userID], assetID)
+}
+
+func (m *MemoryStore) RemoveFavourite(userID, assetID string) bool {
+	log.Printf("Storage: RemoveFavourite called for user %s, asset %s", userID, assetID)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	favs := m.favourites[userID]
+	for i, fav := range favs {
+		if fav == assetID {
+			m.favourites[userID] = append(favs[:i], favs[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func (m *MemoryStore) GetFavourites(userID string) []models.Asset {
+	log.Printf("Storage: GetFavourites called for user %s", userID)
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var result []models.Asset
+	allAssets := m.store[userID]
+	for _, favID := range m.favourites[userID] {
+		for _, asset := range allAssets {
+			if asset.GetID() == favID {
+				result = append(result, asset)
+			}
+		}
+	}
+	return result
 }
