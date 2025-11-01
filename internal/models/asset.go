@@ -8,18 +8,18 @@ type Asset interface {
 
 // ChartData represents one data point in a chart
 type ChartData struct {
-	Label string  `json:"label"`
-	Value float64 `json:"value"`
+	DatapointCode string `json:"datapoint_code"`
+	NamespaceCode string `json:"namespace_code"`
+	QuestionCode  string `json:"question_code"`
+	SuffixCode    string `json:"suffix_code"`
 }
 
 // Chart asset
 type Chart struct {
-	ID          string      `json:"id"`
-	Title       string      `json:"title"`
-	Description string      `json:"description"`
-	XAxisTitle  string      `json:"x_axis_title"`
-	YAxisTitle  string      `json:"y_axis_title"`
-	Data        []ChartData `json:"data"`
+	ID          string      `json:"id"`          // Chart unique ID
+	Name        string      `json:"name"`        // Chart title
+	Description string      `json:"description"` // Chart description
+	Attributes  []ChartData `json:"attributes"`  // Essential data points
 }
 
 func (c *Chart) GetID() string              { return c.ID }

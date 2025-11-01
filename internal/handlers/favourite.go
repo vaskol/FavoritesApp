@@ -49,23 +49,23 @@ func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) 
 
 	switch assetType {
 	case "chart":
-		data := []models.ChartData{}
-		if d, ok := body["data"].([]interface{}); ok {
+		attributes := []models.ChartData{}
+		if d, ok := body["attributes"].([]interface{}); ok {
 			for _, item := range d {
 				m := item.(map[string]interface{})
-				data = append(data, models.ChartData{
-					Label: m["label"].(string),
-					Value: m["value"].(float64),
+				attributes = append(attributes, models.ChartData{
+					DatapointCode: m["datapoint_code"].(string),
+					NamespaceCode: m["namespace_code"].(string),
+					QuestionCode:  m["question_code"].(string),
+					SuffixCode:    m["suffix_code"].(string),
 				})
 			}
 		}
 		a := &models.Chart{
 			ID:          body["id"].(string),
-			Title:       body["title"].(string),
+			Name:        body["name"].(string),
 			Description: body["description"].(string),
-			XAxisTitle:  body["x_axis_title"].(string),
-			YAxisTitle:  body["y_axis_title"].(string),
-			Data:        data,
+			Attributes:  attributes,
 		}
 		asset = a
 	case "insight":
