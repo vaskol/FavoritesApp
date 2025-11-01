@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"log"
 	"favouritesApp/internal/models"
 	"sync"
 )
@@ -17,6 +18,7 @@ func NewMemoryStore() *MemoryStore {
 }
 
 func (m *MemoryStore) Get(userID string) []models.Asset {
+	log.Printf("Storage: Get called for user %s", userID)
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -26,6 +28,7 @@ func (m *MemoryStore) Get(userID string) []models.Asset {
 }
 
 func (m *MemoryStore) Add(userID string, asset models.Asset) {
+	log.Printf("Storage: Add called for user %s", userID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -33,6 +36,7 @@ func (m *MemoryStore) Add(userID string, asset models.Asset) {
 }
 
 func (m *MemoryStore) Remove(userID, assetID string) bool {
+	log.Printf("Storage: Remove called for user %s, asset %s", userID, assetID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	assets, ok := m.store[userID]
@@ -49,6 +53,7 @@ func (m *MemoryStore) Remove(userID, assetID string) bool {
 }
 
 func (m *MemoryStore) EditDescription(userID, assetID, desc string) bool {
+	log.Printf("Storage: EditDescription called for user %s, asset %s", userID, assetID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	assets, ok := m.store[userID]

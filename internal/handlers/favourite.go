@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"favouritesApp/internal/models"
@@ -20,12 +21,15 @@ func NewFavouriteHandler(service *services.FavouriteService) *FavouriteHandler {
 
 func (h *FavouriteHandler) GetFavourites(w http.ResponseWriter, r *http.Request) {
 	userID := mux.Vars(r)["userId"]
+	log.Printf("GetFavourites called for user %s", userID)
 	favs := h.service.GetFavourites(userID)
 	json.NewEncoder(w).Encode(favs)
+	log.Printf("GetFavourites completed for user %s", userID)
 }
 
 func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) {
 	userID := mux.Vars(r)["userId"]
+	log.Printf("AddFavourite called for user %s", userID)
 
 	// Simple approach: decode into a map to detect type
 	var body map[string]interface{}
@@ -39,14 +43,29 @@ func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Asset type required", http.StatusBadRequest)
 		return
 	}
+	log.Printf("Adding asset of type %s for user %s", assetType, userID)
 
 	var asset models.Asset
 
 	switch assetType {
 	case "chart":
+		data := []models.ChartData{}
+		if d, ok := body["data"].([]interface{}); ok {
+			for _, item := range d {
+				m := item.(map[string]interface{})
+				data = append(data, models.ChartData{
+					Label: m["label"].(string),
+					Value: m["value"].(float64),
+				})
+			}
+		}
 		a := &models.Chart{
 			ID:          body["id"].(string),
+			Title:       body["title"].(string),
 			Description: body["description"].(string),
+			XAxisTitle:  body["x_axis_title"].(string),
+			YAxisTitle:  body["y_axis_title"].(string),
+			Data:        data,
 		}
 		asset = a
 	case "insight":
@@ -73,20 +92,38 @@ func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) 
 
 	h.service.AddFavourite(userID, asset)
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(asset)
+
+	switch a := asset.(type) {
+	case *models.Chart:
+		json.NewEncoder(w).Encode(a)
+	case *models.Insight:
+		json.NewEncoder(w).Encode(a)
+	case *models.Audience:
+		json.NewEncoder(w).Encode(a)
+	default:
+		http.Error(w, "Unknown asset type", http.StatusInternalServerError)
+	}
+	log.Printf("AddFavourite completed for user %s", userID)
 }
 
 func (h *FavouriteHandler) RemoveFavourite(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	if !h.service.RemoveFavourite(vars["userId"], vars["assetId"]) {
+	userID := vars["userId"]
+	assetID := vars["assetId"]
+	log.Printf("RemoveFavourite called for user %s, asset %s", userID, assetID)
+	if !h.service.RemoveFavourite(userID, assetID) {
 		http.Error(w, "Asset not found", http.StatusNotFound)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+	log.Printf("RemoveFavourite completed for user %s, asset %s", userID, assetID)
 }
 
 func (h *FavouriteHandler) EditFavourite(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+	userID := vars["userId"]
+	assetID := vars["assetId"]
+	log.Printf("EditFavourite called for user %s, asset %s", userID, assetID)
 	var body struct {
 		Description string `json:"description"`
 	}
@@ -95,9 +132,10 @@ func (h *FavouriteHandler) EditFavourite(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if !h.service.EditDescription(vars["userId"], vars["assetId"], body.Description) {
+	if !h.service.EditDescription(userID, assetID, body.Description) {
 		http.Error(w, "Asset not found", http.StatusNotFound)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+	log.Printf("EditFavourite completed for user %s, asset %s", userID, assetID)
 }

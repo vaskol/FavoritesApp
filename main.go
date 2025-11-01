@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	log.Println("Starting the application...")
 	store := storage.NewMemoryStore()
 	service := services.NewFavouriteService(store)
 	handler := handlers.NewFavouriteHandler(service)
