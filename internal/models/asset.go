@@ -37,12 +37,8 @@ func (i *Insight) SetDescription(desc string) { i.Description = desc }
 // Audience asset
 type Audience struct {
 	ID          string `json:"id"`
-	Description string `json:"description"`
-	Gender      string `json:"gender"`
-	Country     string `json:"country"`
-	AgeGroup    string `json:"age_group"`
-	SocialHours int    `json:"social_hours"`
-	Purchases   int    `json:"purchases"`
+	Name        string `json:"name"`
+	Description string `json:"description"` // extra info
 }
 
 func (a *Audience) GetID() string              { return a.ID }

@@ -77,12 +77,8 @@ func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) 
 	case "audience":
 		a := &models.Audience{
 			ID:          body["id"].(string),
+			Name:        body["name"].(string),
 			Description: body["description"].(string),
-			Gender:      body["gender"].(string),
-			Country:     body["country"].(string),
-			AgeGroup:    body["age_group"].(string),
-			SocialHours: int(body["social_hours"].(float64)),
-			Purchases:   int(body["purchases"].(float64)),
 		}
 		asset = a
 	default:
