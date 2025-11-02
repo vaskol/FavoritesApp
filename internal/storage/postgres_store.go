@@ -40,6 +40,17 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 		}
 		defer tx.Rollback(ctx)
 
+		// 1. Insert parent first
+		_, err = tx.Exec(ctx,
+			"INSERT INTO assets (asset_id, title, description, asset_type, user_id) VALUES ($1, $2, $3, $4, $5)",
+			a.ID, a.Title, a.Description, "chart", userID,
+		)
+		if err != nil {
+			log.Println("Failed to insert into assets (chart):", err)
+			return
+		}
+
+		// 2. Insert child now that parent exists
 		_, err = tx.Exec(ctx,
 			"INSERT INTO charts (id, title, description, x_axis_title, y_axis_title) VALUES ($1,$2,$3,$4,$5)",
 			a.ID, a.Title, a.Description, a.XAxisTitle, a.YAxisTitle,
@@ -55,19 +66,11 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 				a.ID, d.DatapointCode, d.Value,
 			)
 			if err != nil {
-						log.Println("Failed to insert chart data:", err)
-						return
-					}
-				}
-			
-				_, err = tx.Exec(ctx,
-					"INSERT INTO assets (asset_id, title, description, asset_type) VALUES ($1, $2, $3, $4)",
-					a.ID, a.Title, a.Description, "chart",
-				)
-				if err != nil {
-					log.Println("Failed to insert into assets:", err)
-					return
-				}
+				log.Println("Failed to insert chart data:", err)
+				return
+			}
+		}
+
 		if err = tx.Commit(ctx); err != nil {
 			log.Println("Failed to commit chart transaction:", err)
 		}
@@ -80,21 +83,22 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 		}
 		defer tx.Rollback(ctx)
 
+		// Insert into assets first (and include userID)
+		_, err = tx.Exec(ctx,
+			"INSERT INTO assets (asset_id, title, description, asset_type, user_id) VALUES ($1, $2, $3, $4, $5)",
+			a.ID, "Insight", a.Description, "insight", userID,
+		)
+		if err != nil {
+			log.Println("Failed to insert into assets:", err)
+			return
+		}
+
 		_, err = tx.Exec(ctx,
 			"INSERT INTO insights (id, description) VALUES ($1,$2)",
 			a.ID, a.Description,
 		)
 		if err != nil {
 			log.Println("Failed to insert insight:", err)
-			return
-		}
-
-		_, err = tx.Exec(ctx,
-			"INSERT INTO assets (asset_id, title, description, asset_type) VALUES ($1, $2, $3, $4)",
-			a.ID, "Insight", a.Description, "insight",
-		)
-		if err != nil {
-			log.Println("Failed to insert into assets:", err)
 			return
 		}
 
@@ -110,21 +114,22 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 		}
 		defer tx.Rollback(ctx)
 
+		// Insert into assets first
+		_, err = tx.Exec(ctx,
+			"INSERT INTO assets (asset_id, title, description, asset_type, user_id) VALUES ($1, $2, $3, $4, $5)",
+			a.ID, "Audience", a.Description, "audience", userID,
+		)
+		if err != nil {
+			log.Println("Failed to insert into assets:", err)
+			return
+		}
+
 		_, err = tx.Exec(ctx,
 			"INSERT INTO audiences (id, gender, country, age_group, social_hours, purchases, description) VALUES ($1,$2,$3,$4,$5,$6,$7)",
 			a.ID, a.Gender, a.Country, a.AgeGroup, a.SocialHours, a.Purchases, a.Description,
 		)
 		if err != nil {
 			log.Println("Failed to insert audience:", err)
-			return
-		}
-
-		_, err = tx.Exec(ctx,
-			"INSERT INTO assets (asset_id, title, description, asset_type) VALUES ($1, $2, $3, $4)",
-			a.ID, "Audience", a.Description, "audience",
-		)
-		if err != nil {
-			log.Println("Failed to insert into assets:", err)
 			return
 		}
 
@@ -236,6 +241,7 @@ func (p *PostgresStore) EditDescription(userID, assetID, newDesc string) bool {
 
 func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
 	ctx := context.Background()
+
 	// Ensure user exists before adding a favourite
 	_, err := p.pool.Exec(ctx,
 		"INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING",
@@ -246,14 +252,16 @@ func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
 		return false
 	}
 
+	// Insert into favourites using the correct ON CONFLICT target
 	_, err = p.pool.Exec(ctx,
-		"INSERT INTO favourites (user_id, asset_id, asset_type) VALUES ($1,$2,$3) ON CONFLICT (user_id, asset_id, asset_type) DO NOTHING",
+		"INSERT INTO favourites (user_id, asset_id, asset_type) VALUES ($1, $2, $3) ON CONFLICT (user_id, asset_id) DO NOTHING",
 		userID, assetID, assetType,
 	)
 	if err != nil {
 		log.Println("Failed to add favourite:", err)
 		return false
 	}
+
 	return true
 }
 
