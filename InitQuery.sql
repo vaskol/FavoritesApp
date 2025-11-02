@@ -53,11 +53,10 @@ CREATE TABLE IF NOT EXISTS audiences (
 
 -- Favourites (link table)
 CREATE TABLE IF NOT EXISTS favourites (
-    id SERIAL PRIMARY KEY,
     user_id VARCHAR(50) NOT NULL,
     asset_id VARCHAR(50) NOT NULL,
-    asset_type VARCHAR(20) NOT NULL,   -- optional, but kept since you had it
+    asset_type VARCHAR(20) NOT NULL,
+    PRIMARY KEY (user_id, asset_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (asset_id) REFERENCES assets(asset_id) ON DELETE CASCADE,
-    UNIQUE(user_id, asset_id)
+    FOREIGN KEY (asset_id) REFERENCES assets(asset_id) ON DELETE CASCADE
 );

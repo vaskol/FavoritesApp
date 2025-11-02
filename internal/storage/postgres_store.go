@@ -264,7 +264,7 @@ func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
 		return false
 	}
 
-	// Insert into favourites using the unique constraint
+	// Insert into favourites using composite PK
 	_, err = p.pool.Exec(ctx,
 		"INSERT INTO favourites (user_id, asset_id, asset_type) VALUES ($1, $2, $3) ON CONFLICT (user_id, asset_id) DO NOTHING",
 		userID, assetID, assetType,
