@@ -242,7 +242,7 @@ func (p *PostgresStore) EditDescription(userID, assetID, newDesc string) bool {
 func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
 	ctx := context.Background()
 
-	// Ensure user exists before adding a favourite
+	// Ensure user exists
 	_, err := p.pool.Exec(ctx,
 		"INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING",
 		userID, "Unknown",
@@ -252,7 +252,19 @@ func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
 		return false
 	}
 
-	// Insert into favourites using the correct ON CONFLICT target
+	// Check that the asset belongs to this user
+	var ownerID string
+	err = p.pool.QueryRow(ctx, "SELECT user_id FROM assets WHERE asset_id=$1", assetID).Scan(&ownerID)
+	if err != nil {
+		log.Println("Failed to fetch asset owner or asset does not exist:", err)
+		return false
+	}
+	if ownerID != userID {
+		log.Println("Cannot favourite an asset not owned by the user")
+		return false
+	}
+
+	// Insert into favourites using the unique constraint
 	_, err = p.pool.Exec(ctx,
 		"INSERT INTO favourites (user_id, asset_id, asset_type) VALUES ($1, $2, $3) ON CONFLICT (user_id, asset_id) DO NOTHING",
 		userID, assetID, assetType,
