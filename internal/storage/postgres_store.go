@@ -18,41 +18,69 @@ func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
 }
 
 // ----------------- Asset Methods -----------------
-
 func (p *PostgresStore) Add(userID string, asset models.Asset) {
 	ctx := context.Background()
+
+	// Ensure user exists
+	_, err := p.pool.Exec(ctx,
+		"INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+		userID, "Unknown", //TODO FIX TABLE SCHEMA TO REMOVE NAME CONSTRAINT
+	)
+	if err != nil {
+		log.Println("Failed to ensure user exists:", err)
+		return
+	}
+
 	switch a := asset.(type) {
 	case *models.Chart:
-		_, err := p.pool.Exec(ctx,
+		tx, err := p.pool.Begin(ctx)
+		if err != nil {
+			log.Println("Failed to start transaction:", err)
+			return
+		}
+		defer tx.Rollback(ctx)
+
+		_, err = tx.Exec(ctx,
 			"INSERT INTO charts (id, title, description, x_axis_title, y_axis_title) VALUES ($1,$2,$3,$4,$5)",
 			a.ID, a.Title, a.Description, a.XAxisTitle, a.YAxisTitle,
 		)
 		if err != nil {
-			log.Println(err)
+			log.Println("Failed to insert chart:", err)
 			return
 		}
+
 		for _, d := range a.Data {
-			_, _ = p.pool.Exec(ctx,
+			_, err = tx.Exec(ctx,
 				"INSERT INTO chart_data (chart_id, datapoint_code, value) VALUES ($1,$2,$3)",
 				a.ID, d.DatapointCode, d.Value,
 			)
+			if err != nil {
+				log.Println("Failed to insert chart data:", err)
+				return
+			}
 		}
+
+		if err = tx.Commit(ctx); err != nil {
+			log.Println("Failed to commit chart transaction:", err)
+		}
+
 	case *models.Insight:
 		_, err := p.pool.Exec(ctx,
 			"INSERT INTO insights (id, description) VALUES ($1,$2)",
 			a.ID, a.Description,
 		)
 		if err != nil {
-			log.Println(err)
+			log.Println("Failed to insert insight:", err)
 			return
 		}
+
 	case *models.Audience:
 		_, err := p.pool.Exec(ctx,
 			"INSERT INTO audiences (id, gender, country, age_group, social_hours, purchases, description) VALUES ($1,$2,$3,$4,$5,$6,$7)",
 			a.ID, a.Gender, a.Country, a.AgeGroup, a.SocialHours, a.Purchases, a.Description,
 		)
 		if err != nil {
-			log.Println(err)
+			log.Println("Failed to insert audience:", err)
 			return
 		}
 	}
@@ -62,7 +90,7 @@ func (p *PostgresStore) Get(userID string) []models.Asset {
 	ctx := context.Background()
 	rows, err := p.pool.Query(ctx, "SELECT asset_id, asset_type FROM favourites WHERE user_id=$1", userID)
 	if err != nil {
-		log.Println(err)
+		log.Println("Failed to get assets:", err)
 		return nil
 	}
 	defer rows.Close()
@@ -71,8 +99,10 @@ func (p *PostgresStore) Get(userID string) []models.Asset {
 	for rows.Next() {
 		var assetID, assetType string
 		if err := rows.Scan(&assetID, &assetType); err != nil {
+			log.Println("Failed to scan asset row:", err)
 			continue
 		}
+
 		var asset models.Asset
 		switch assetType {
 		case "chart":
@@ -89,28 +119,67 @@ func (p *PostgresStore) Get(userID string) []models.Asset {
 
 func (p *PostgresStore) Remove(userID, assetID string) bool {
 	ctx := context.Background()
-	_, err := p.pool.Exec(ctx,
-		`DELETE FROM chart_data WHERE chart_id=$1;
-		 DELETE FROM charts WHERE id=$1;
-		 DELETE FROM insights WHERE id=$1;
-		 DELETE FROM audiences WHERE id=$1;
-		 DELETE FROM favourites WHERE asset_id=$1 AND user_id=$2`,
-		assetID, userID,
-	)
-	return err == nil
+	tx, err := p.pool.Begin(ctx)
+	if err != nil {
+		log.Println("Failed to start remove transaction:", err)
+		return false
+	}
+	defer tx.Rollback(ctx)
+
+	statements := []struct {
+		query string
+		args  []interface{}
+	}{
+		{"DELETE FROM chart_data WHERE chart_id=$1", []interface{}{assetID}},
+		{"DELETE FROM charts WHERE id=$1", []interface{}{assetID}},
+		{"DELETE FROM insights WHERE id=$1", []interface{}{assetID}},
+		{"DELETE FROM audiences WHERE id=$1", []interface{}{assetID}},
+		{"DELETE FROM favourites WHERE asset_id=$1 AND user_id=$2", []interface{}{assetID, userID}},
+	}
+
+	for _, stmt := range statements {
+		if _, err := tx.Exec(ctx, stmt.query, stmt.args...); err != nil {
+			log.Println("Failed to execute remove statement:", err)
+			return false
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		log.Println("Failed to commit remove transaction:", err)
+		return false
+	}
+
+	return true
 }
 
 func (p *PostgresStore) EditDescription(userID, assetID, newDesc string) bool {
 	ctx := context.Background()
+	tx, err := p.pool.Begin(ctx)
+	if err != nil {
+		log.Println("Failed to start edit transaction:", err)
+		return false
+	}
+	defer tx.Rollback(ctx)
 
-	// Try updating all three tables
-	_, err := p.pool.Exec(ctx,
-		`UPDATE charts SET description=$1 WHERE id=$2;
-		 UPDATE insights SET description=$1 WHERE id=$2;
-		 UPDATE audiences SET description=$1 WHERE id=$2`,
-		newDesc, assetID,
-	)
-	return err == nil
+	statements := []string{
+		"UPDATE charts SET description=$1 WHERE id=$2",
+		"UPDATE insights SET description=$1 WHERE id=$2",
+		"UPDATE audiences SET description=$1 WHERE id=$2",
+	}
+
+	for _, stmt := range statements {
+		if _, err := tx.Exec(ctx, stmt, newDesc, assetID); err != nil {
+			log.Println("Failed to update description:", err)
+			return false
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		log.Println("Failed to commit edit transaction:", err)
+		return false
+	}
+
+	return true
 }
 
 // ----------------- Favourite Methods -----------------
@@ -120,7 +189,11 @@ func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
 		"INSERT INTO favourites (user_id, asset_id, asset_type) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",
 		userID, assetID, assetType,
 	)
-	return err == nil
+	if err != nil {
+		log.Println("Failed to add favourite:", err)
+		return false
+	}
+	return true
 }
 
 func (p *PostgresStore) RemoveFavourite(userID, assetID string) bool {
@@ -128,7 +201,11 @@ func (p *PostgresStore) RemoveFavourite(userID, assetID string) bool {
 		"DELETE FROM favourites WHERE user_id=$1 AND asset_id=$2",
 		userID, assetID,
 	)
-	return err == nil
+	if err != nil {
+		log.Println("Failed to remove favourite:", err)
+		return false
+	}
+	return true
 }
 
 func (p *PostgresStore) GetFavourites(userID string) []models.Favourite {
@@ -136,7 +213,7 @@ func (p *PostgresStore) GetFavourites(userID string) []models.Favourite {
 	rows, err := p.pool.Query(ctx,
 		"SELECT asset_id, asset_type FROM favourites WHERE user_id=$1", userID)
 	if err != nil {
-		log.Println(err)
+		log.Println("Failed to get favourites:", err)
 		return nil
 	}
 	defer rows.Close()
@@ -145,6 +222,7 @@ func (p *PostgresStore) GetFavourites(userID string) []models.Favourite {
 	for rows.Next() {
 		var assetID, assetType string
 		if err := rows.Scan(&assetID, &assetType); err != nil {
+			log.Println("Failed to scan favourite row:", err)
 			continue
 		}
 
