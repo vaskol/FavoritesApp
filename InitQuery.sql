@@ -48,6 +48,16 @@ CREATE TABLE IF NOT EXISTS favourites (
     UNIQUE(user_id, asset_id, asset_type)
 );
 
+-- Assets table
+CREATE TABLE IF NOT EXISTS assets (
+    asset_id VARCHAR(50) PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    asset_type VARCHAR(20) NOT NULL
+);
+
+
+
 
 
 

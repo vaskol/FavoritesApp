@@ -55,17 +55,32 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 				a.ID, d.DatapointCode, d.Value,
 			)
 			if err != nil {
-				log.Println("Failed to insert chart data:", err)
-				return
-			}
-		}
-
+						log.Println("Failed to insert chart data:", err)
+						return
+					}
+				}
+			
+				_, err = tx.Exec(ctx,
+					"INSERT INTO assets (asset_id, title, description, asset_type) VALUES ($1, $2, $3, $4)",
+					a.ID, a.Title, a.Description, "chart",
+				)
+				if err != nil {
+					log.Println("Failed to insert into assets:", err)
+					return
+				}
 		if err = tx.Commit(ctx); err != nil {
 			log.Println("Failed to commit chart transaction:", err)
 		}
 
 	case *models.Insight:
-		_, err := p.pool.Exec(ctx,
+		tx, err := p.pool.Begin(ctx)
+		if err != nil {
+			log.Println("Failed to start transaction:", err)
+			return
+		}
+		defer tx.Rollback(ctx)
+
+		_, err = tx.Exec(ctx,
 			"INSERT INTO insights (id, description) VALUES ($1,$2)",
 			a.ID, a.Description,
 		)
@@ -74,14 +89,47 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 			return
 		}
 
+		_, err = tx.Exec(ctx,
+			"INSERT INTO assets (asset_id, title, description, asset_type) VALUES ($1, $2, $3, $4)",
+			a.ID, "Insight", a.Description, "insight",
+		)
+		if err != nil {
+			log.Println("Failed to insert into assets:", err)
+			return
+		}
+
+		if err = tx.Commit(ctx); err != nil {
+			log.Println("Failed to commit insight transaction:", err)
+		}
+
 	case *models.Audience:
-		_, err := p.pool.Exec(ctx,
+		tx, err := p.pool.Begin(ctx)
+		if err != nil {
+			log.Println("Failed to start transaction:", err)
+			return
+		}
+		defer tx.Rollback(ctx)
+
+		_, err = tx.Exec(ctx,
 			"INSERT INTO audiences (id, gender, country, age_group, social_hours, purchases, description) VALUES ($1,$2,$3,$4,$5,$6,$7)",
 			a.ID, a.Gender, a.Country, a.AgeGroup, a.SocialHours, a.Purchases, a.Description,
 		)
 		if err != nil {
 			log.Println("Failed to insert audience:", err)
 			return
+		}
+
+		_, err = tx.Exec(ctx,
+			"INSERT INTO assets (asset_id, title, description, asset_type) VALUES ($1, $2, $3, $4)",
+			a.ID, "Audience", a.Description, "audience",
+		)
+		if err != nil {
+			log.Println("Failed to insert into assets:", err)
+			return
+		}
+
+		if err = tx.Commit(ctx); err != nil {
+			log.Println("Failed to commit audience transaction:", err)
 		}
 	}
 }
@@ -134,6 +182,7 @@ func (p *PostgresStore) Remove(userID, assetID string) bool {
 		{"DELETE FROM charts WHERE id=$1", []interface{}{assetID}},
 		{"DELETE FROM insights WHERE id=$1", []interface{}{assetID}},
 		{"DELETE FROM audiences WHERE id=$1", []interface{}{assetID}},
+		{"DELETE FROM assets WHERE asset_id=$1", []interface{}{assetID}},
 		{"DELETE FROM favourites WHERE asset_id=$1 AND user_id=$2", []interface{}{assetID, userID}},
 	}
 
@@ -165,6 +214,7 @@ func (p *PostgresStore) EditDescription(userID, assetID, newDesc string) bool {
 		"UPDATE charts SET description=$1 WHERE id=$2",
 		"UPDATE insights SET description=$1 WHERE id=$2",
 		"UPDATE audiences SET description=$1 WHERE id=$2",
+		"UPDATE assets SET description=$1 WHERE asset_id=$2",
 	}
 
 	for _, stmt := range statements {
@@ -185,8 +235,19 @@ func (p *PostgresStore) EditDescription(userID, assetID, newDesc string) bool {
 // ----------------- Favourite Methods -----------------
 
 func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
-	_, err := p.pool.Exec(context.Background(),
-		"INSERT INTO favourites (user_id, asset_id, asset_type) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",
+	ctx := context.Background()
+	// Ensure user exists before adding a favourite
+	_, err := p.pool.Exec(ctx,
+		"INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING",
+		userID, "Unknown",
+	)
+	if err != nil {
+		log.Println("Failed to ensure user exists:", err)
+		return false
+	}
+
+	_, err = p.pool.Exec(ctx,
+		"INSERT INTO favourites (user_id, asset_id, asset_type) VALUES ($1,$2,$3) ON CONFLICT (user_id, asset_id, asset_type) DO NOTHING",
 		userID, assetID, assetType,
 	)
 	if err != nil {

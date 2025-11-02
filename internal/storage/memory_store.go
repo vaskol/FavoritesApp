@@ -106,17 +106,17 @@ func (m *MemoryStore) RemoveFavourite(userID, assetID string) bool {
 	return false
 }
 
-func (m *MemoryStore) GetFavourites(userID string) []models.Asset {
+func (m *MemoryStore) GetFavourites(userID string) []models.Favourite {
 	log.Printf("Storage: GetFavourites called for user %s", userID)
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	var result []models.Asset
+	var result []models.Favourite
 	allAssets := m.store[userID]
 	for _, favID := range m.favourites[userID] {
 		for _, asset := range allAssets {
 			if asset.GetID() == favID {
-				result = append(result, asset)
+				result = append(result, models.Favourite{UserID: userID, Asset: asset})
 			}
 		}
 	}

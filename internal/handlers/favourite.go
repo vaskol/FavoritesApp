@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	favouriteServices "assetsApp/internal/services/favourite"
@@ -35,6 +36,8 @@ func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	log.Printf("Received assetType: %s", body.AssetType)
 
 	if !h.service.AddFavourite(userID, assetID, body.AssetType) {
 		http.Error(w, "Could not add favourite", http.StatusInternalServerError)
