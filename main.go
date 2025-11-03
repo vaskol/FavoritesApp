@@ -53,11 +53,13 @@ func main() {
 	// store := storage.NewMemoryStore()
 
 	// Postgres store
-	pool, err := pgxpool.New(context.Background(), "postgres://postgres:postgres@localhost:5432/assetdb?sslmode=disable")
+	db, err := pgxpool.New(context.Background(), "postgres://postgres:postgres@localhost:5432/assetdb?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
-	store := storage.NewPostgresStore(pool)
+	dbStore := storage.NewPostgresStore(db)
+	redisClient := storage.NewRedisClient("localhost:6379")
+	store := storage.NewCachedStore(dbStore, redisClient)
 
 	// -------------------- SERVICES --------------------
 	assetService := assetServices.NewAssetService(store)
