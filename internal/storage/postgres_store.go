@@ -239,7 +239,7 @@ func (p *PostgresStore) EditDescription(userID, assetID, newDesc string) bool {
 
 // ----------------- Favourite Methods -----------------
 
-func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
+func (p *PostgresStore) AddFavourite(userID, assetID, _ string) bool {
 	ctx := context.Background()
 
 	// Ensure user exists
@@ -252,19 +252,15 @@ func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
 		return false
 	}
 
-	// Check that the asset belongs to this user
-	var ownerID string
-	err = p.pool.QueryRow(ctx, "SELECT user_id FROM assets WHERE asset_id=$1", assetID).Scan(&ownerID)
+	// Fetch the asset type from assets table
+	var assetType string
+	err = p.pool.QueryRow(ctx, "SELECT asset_type FROM assets WHERE asset_id=$1", assetID).Scan(&assetType)
 	if err != nil {
-		log.Println("Failed to fetch asset owner or asset does not exist:", err)
-		return false
-	}
-	if ownerID != userID {
-		log.Println("Cannot favourite an asset not owned by the user")
+		log.Println("Failed to fetch asset type:", err)
 		return false
 	}
 
-	// Insert into favourites using composite PK
+	// Insert into favourites
 	_, err = p.pool.Exec(ctx,
 		"INSERT INTO favourites (user_id, asset_id, asset_type) VALUES ($1, $2, $3) ON CONFLICT (user_id, asset_id) DO NOTHING",
 		userID, assetID, assetType,
@@ -274,6 +270,7 @@ func (p *PostgresStore) AddFavourite(userID, assetID, assetType string) bool {
 		return false
 	}
 
+	log.Printf("Favourite added: user=%s, asset=%s, type=%s", userID, assetID, assetType)
 	return true
 }
 
@@ -291,6 +288,7 @@ func (p *PostgresStore) RemoveFavourite(userID, assetID string) bool {
 
 func (p *PostgresStore) GetFavourites(userID string) []models.Favourite {
 	ctx := context.Background()
+
 	rows, err := p.pool.Query(ctx,
 		"SELECT asset_id, asset_type FROM favourites WHERE user_id=$1", userID)
 	if err != nil {
@@ -299,6 +297,8 @@ func (p *PostgresStore) GetFavourites(userID string) []models.Favourite {
 	}
 	defer rows.Close()
 
+	log.Printf("Query executed for user %s", userID)
+
 	var favs []models.Favourite
 	for rows.Next() {
 		var assetID, assetType string
@@ -306,21 +306,80 @@ func (p *PostgresStore) GetFavourites(userID string) []models.Favourite {
 			log.Println("Failed to scan favourite row:", err)
 			continue
 		}
+		log.Printf("Processing favourite: assetID=%s, assetType=%s", assetID, assetType)
 
 		var asset models.Asset
+
 		switch assetType {
 		case "chart":
-			asset = &models.Chart{ID: assetID}
+			var c models.Chart
+			err := p.pool.QueryRow(ctx, `
+				SELECT id, title, description, x_axis_title, y_axis_title
+				FROM charts WHERE id=$1`, assetID).Scan(&c.ID, &c.Title, &c.Description, &c.XAxisTitle, &c.YAxisTitle)
+			if err != nil {
+				log.Println("Failed to fetch chart:", err)
+				continue
+			}
+
+			// Fetch chart data
+			dataRows, err := p.pool.Query(ctx, `SELECT datapoint_code, value FROM chart_data WHERE chart_id=$1`, assetID)
+			if err != nil {
+				log.Println("Failed to fetch chart data:", err)
+			} else {
+				defer dataRows.Close()
+				for dataRows.Next() {
+					var dp models.ChartData
+					if err := dataRows.Scan(&dp.DatapointCode, &dp.Value); err != nil {
+						log.Println("Failed to scan chart data row:", err)
+						continue
+					}
+					c.Data = append(c.Data, dp)
+				}
+				log.Printf("Fetched %d data points for chart %s", len(c.Data), c.ID)
+			}
+
+			asset = &c
+			log.Printf("Chart fetched successfully: %s", c.Title)
+
 		case "insight":
-			asset = &models.Insight{ID: assetID}
+			var i models.Insight
+			err := p.pool.QueryRow(ctx, `SELECT id, description FROM insights WHERE id=$1`, assetID).
+				Scan(&i.ID, &i.Description)
+			if err != nil {
+				log.Println("Failed to fetch insight:", err)
+				continue
+			}
+			asset = &i
+			log.Printf("Insight fetched successfully: %s", i.ID)
+
 		case "audience":
-			asset = &models.Audience{ID: assetID}
+			var a models.Audience
+			err := p.pool.QueryRow(ctx, `
+				SELECT id, gender, country, age_group, social_hours, purchases, description
+				FROM audiences WHERE id=$1`, assetID).Scan(&a.ID, &a.Gender, &a.Country, &a.AgeGroup, &a.SocialHours, &a.Purchases, &a.Description)
+			if err != nil {
+				log.Println("Failed to fetch audience:", err)
+				continue
+			}
+			asset = &a
+			log.Printf("Audience fetched successfully: %s", a.ID)
+
+		default:
+			log.Printf("Unknown asset type: %s", assetType)
+			continue
 		}
 
 		favs = append(favs, models.Favourite{
 			UserID: userID,
 			Asset:  asset,
 		})
+		log.Printf("Favourite appended for user %s: assetID=%s", userID, assetID)
 	}
+
+	if err := rows.Err(); err != nil {
+		log.Println("Row iteration error:", err)
+	}
+
+	log.Printf("GetFavourites finished for user %s, total favourites: %d", userID, len(favs))
 	return favs
 }
