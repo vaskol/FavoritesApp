@@ -83,6 +83,7 @@ func (h *AssetHandler) AddAsset(w http.ResponseWriter, r *http.Request) {
 			AgeGroup:    body["age_group"].(string),
 			SocialHours: int(body["social_hours"].(float64)),
 			Purchases:   int(body["purchases"].(float64)),
+			Description: body["description"].(string),
 		}
 		asset = a
 

@@ -24,7 +24,7 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 	// Ensure user exists
 	_, err := p.pool.Exec(ctx,
 		"INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-		userID, "Unknown", //TODO FIX TABLE SCHEMA TO REMOVE NAME CONSTRAINT
+		userID, "User "+userID, //TODO FIX TABLE SCHEMA TO REMOVE NAME CONSTRAINT
 	)
 	if err != nil {
 		log.Println("Failed to ensure user exists:", err)
@@ -141,7 +141,7 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 
 func (p *PostgresStore) Get(userID string) []models.Asset {
 	ctx := context.Background()
-	rows, err := p.pool.Query(ctx, "SELECT asset_id, asset_type FROM favourites WHERE user_id=$1", userID)
+	rows, err := p.pool.Query(ctx, "SELECT asset_id, asset_type FROM assets WHERE user_id=$1", userID)
 	if err != nil {
 		log.Println("Failed to get assets:", err)
 		return nil
