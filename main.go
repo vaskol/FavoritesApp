@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	"assetsApp/internal/handlers"
 	assetServices "assetsApp/internal/services/asset"
@@ -17,35 +18,6 @@ import (
 func main() {
 	log.Println("Starting the application...")
 
-	// // -------------------- REDIS --------------------
-	// rdb := redis.NewClient(&redis.Options{
-	// 	Addr:     "localhost:6379",
-	// 	Password: "", // no password set
-	// 	DB:       0,  // use default DB
-	// })
-
-	// ctx := context.Background()
-
-	// err := rdb.Set(ctx, "key", "value", 0).Err()
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// val, err := rdb.Get(ctx, "key").Result()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("key", val)
-
-	// val2, err := rdb.Get(ctx, "key2").Result()
-	// if err == redis.Nil {
-	// 	fmt.Println("key2 does not exist")
-	// } else if err != nil {
-	// 	panic(err)
-	// } else {
-	// 	fmt.Println("key2", val2)
-	// }
-
 	// -------------------- STORAGE --------------------
 	// Uncomment one depending on which store you want
 
@@ -53,12 +25,22 @@ func main() {
 	// store := storage.NewMemoryStore()
 
 	// Postgres store
-	db, err := pgxpool.New(context.Background(), "postgres://postgres:postgres@localhost:5432/assetdb?sslmode=disable")
+	dbConnString := os.Getenv("DATABASE_URL")
+	if dbConnString == "" {
+		log.Fatal("DATABASE_URL environment variable not set")
+	}
+	db, err := pgxpool.New(context.Background(), dbConnString)
 	if err != nil {
 		log.Fatal(err)
 	}
 	dbStore := storage.NewPostgresStore(db)
-	redisClient := storage.NewRedisClient("localhost:6379")
+
+	// Redis client for caching
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		log.Fatal("REDIS_ADDR environment variable not set")
+	}
+	redisClient := storage.NewRedisClient(redisAddr)
 	store := storage.NewCachedStore(dbStore, redisClient)
 
 	// -------------------- SERVICES --------------------
