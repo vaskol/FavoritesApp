@@ -1,15 +1,14 @@
 package main
 
 import (
-	"context"
-	"log"
-	"net/http"
-
 	"assetsApp/internal/config"
 	"assetsApp/internal/handlers"
 	assetServices "assetsApp/internal/services/asset"
 	favouriteServices "assetsApp/internal/services/favourite"
 	"assetsApp/internal/storage"
+	"context"
+	"log"
+	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgxpool"

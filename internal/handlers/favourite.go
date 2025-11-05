@@ -1,11 +1,10 @@
 package handlers
 
 import (
+	favouriteServices "assetsApp/internal/services/favourite"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	favouriteServices "assetsApp/internal/services/favourite"
 
 	"github.com/gorilla/mux"
 )

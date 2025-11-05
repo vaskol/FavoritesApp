@@ -9,9 +9,6 @@ import (
 	"assetsApp/internal/models"
 )
 
-// CachedStore is a decorator that adds caching via Redis for favourites.
-// It implements the same AssetStore interface by delegating to the inner db store
-// except for favourites operations which have cache behaviour.
 type CachedStore struct {
 	db    AssetStore
 	cache *RedisClient
@@ -29,11 +26,10 @@ func NewCachedStore(db AssetStore, cache *RedisClient) *CachedStore {
 	}
 }
 
+// ----- Asset methods without caching -----
 func favsCacheKey(userID string) string {
 	return fmt.Sprintf("favourites:%s", userID)
 }
-
-// ----- Delegate methods for assets (unchanged behaviour) -----
 
 func (c *CachedStore) Get(userID string) []models.Asset {
 	return c.db.Get(userID)
@@ -44,7 +40,6 @@ func (c *CachedStore) Add(userID string, asset models.Asset) {
 }
 
 func (c *CachedStore) Remove(userID, assetID string) bool {
-	// If removing an asset, also best-effort invalidate favourites cache for the owner
 	res := c.db.Remove(userID, assetID)
 	if res && c.cache != nil {
 		_ = c.cache.Del(context.Background(), favsCacheKey(userID))

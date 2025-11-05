@@ -1,10 +1,9 @@
 package storage
 
 import (
+	"assetsApp/internal/models"
 	"context"
 	"log"
-
-	"assetsApp/internal/models"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -24,7 +23,7 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 	// Ensure user exists
 	_, err := p.pool.Exec(ctx,
 		"INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-		userID, "User "+userID, //TODO FIX TABLE SCHEMA TO REMOVE NAME CONSTRAINT
+		userID, "User "+userID,
 	)
 	if err != nil {
 		log.Println("Failed to ensure user exists:", err)
@@ -40,7 +39,6 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 		}
 		defer tx.Rollback(ctx)
 
-		// 1. Insert parent first
 		_, err = tx.Exec(ctx,
 			"INSERT INTO assets (asset_id, title, description, asset_type, user_id) VALUES ($1, $2, $3, $4, $5)",
 			a.ID, a.Title, a.Description, "chart", userID,
@@ -50,7 +48,6 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 			return
 		}
 
-		// 2. Insert child now that parent exists
 		_, err = tx.Exec(ctx,
 			"INSERT INTO charts (id, title, description, x_axis_title, y_axis_title) VALUES ($1,$2,$3,$4,$5)",
 			a.ID, a.Title, a.Description, a.XAxisTitle, a.YAxisTitle,
@@ -83,7 +80,6 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 		}
 		defer tx.Rollback(ctx)
 
-		// Insert into assets first (and include userID)
 		_, err = tx.Exec(ctx,
 			"INSERT INTO assets (asset_id, title, description, asset_type, user_id) VALUES ($1, $2, $3, $4, $5)",
 			a.ID, "Insight", a.Description, "insight", userID,
@@ -114,7 +110,6 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 		}
 		defer tx.Rollback(ctx)
 
-		// Insert into assets first
 		_, err = tx.Exec(ctx,
 			"INSERT INTO assets (asset_id, title, description, asset_type, user_id) VALUES ($1, $2, $3, $4, $5)",
 			a.ID, "Audience", a.Description, "audience", userID,
@@ -260,7 +255,6 @@ func (p *PostgresStore) AddFavourite(userID, assetID, _ string) bool {
 		return false
 	}
 
-	// Insert into favourites
 	_, err = p.pool.Exec(ctx,
 		"INSERT INTO favourites (user_id, asset_id, asset_type) VALUES ($1, $2, $3) ON CONFLICT (user_id, asset_id) DO NOTHING",
 		userID, assetID, assetType,

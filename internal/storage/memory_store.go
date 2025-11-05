@@ -19,6 +19,7 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 
+// Add, Get, Remove, EditDescription for Assets
 func (m *MemoryStore) Get(userID string) []models.Asset {
 	log.Printf("Storage: Get called for user %s", userID)
 	m.mu.RLock()
@@ -77,6 +78,8 @@ func (m *MemoryStore) EditDescription(userID, assetID, desc string) bool {
 	}
 	return false
 }
+
+// Add, Get, Remove for Favourites
 func (m *MemoryStore) AddFavourite(userID, assetID, assetType string) bool {
 	log.Printf("Storage: AddFavourite called for user %s, asset %s", userID, assetID)
 	m.mu.Lock()

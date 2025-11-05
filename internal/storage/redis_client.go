@@ -12,16 +12,12 @@ type RedisClient struct {
 	TTL    time.Duration
 }
 
-// NewRedisClient creates a redis client and sets a default TTL for cached keys.
 func NewRedisClient(addr string) *RedisClient {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: addr,
-		// Password: "", // add if needed
+		// Password: "", // TODO: add password
 		// DB: 0,
 	})
-
-	// Optionally: ping to fail early (omitted error handling here to keep minimal)
-	// _ = rdb.Ping(context.Background()).Err()
 
 	return &RedisClient{
 		Client: rdb,

@@ -1,12 +1,11 @@
 package handlers
 
 import (
+	"assetsApp/internal/models"
+	assetServices "assetsApp/internal/services/asset"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"assetsApp/internal/models"
-	assetServices "assetsApp/internal/services/asset"
 
 	"github.com/gorilla/mux"
 )
@@ -105,7 +104,6 @@ func (h *AssetHandler) AddAsset(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Unknown asset type", http.StatusInternalServerError)
 	}
-	log.Printf("AddAsset completed for user %s", userID)
 }
 
 func (h *AssetHandler) RemoveAsset(w http.ResponseWriter, r *http.Request) {
