@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 
+	"assetsApp/internal/config"
 	"assetsApp/internal/handlers"
 	assetServices "assetsApp/internal/services/asset"
 	favouriteServices "assetsApp/internal/services/favourite"
@@ -17,7 +17,7 @@ import (
 
 func main() {
 	log.Println("Starting the application...")
-
+	cfg := config.LoadConfig()
 	// -------------------- STORAGE --------------------
 	// Uncomment one depending on which store you want
 
@@ -25,22 +25,12 @@ func main() {
 	// store := storage.NewMemoryStore()
 
 	// Postgres store
-	dbConnString := os.Getenv("DATABASE_URL")
-	if dbConnString == "" {
-		log.Fatal("DATABASE_URL environment variable not set")
-	}
-	db, err := pgxpool.New(context.Background(), dbConnString)
+	db, err := pgxpool.New(context.Background(), cfg.PostgresURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 	dbStore := storage.NewPostgresStore(db)
-
-	// Redis client for caching
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		log.Fatal("REDIS_ADDR environment variable not set")
-	}
-	redisClient := storage.NewRedisClient(redisAddr)
+	redisClient := storage.NewRedisClient(cfg.RedisAddr)
 	store := storage.NewCachedStore(dbStore, redisClient)
 
 	// -------------------- SERVICES --------------------
