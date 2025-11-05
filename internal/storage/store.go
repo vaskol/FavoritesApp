@@ -1,14 +1,19 @@
 package storage
 
-import "assetsApp/internal/models"
+import (
+	"assetsApp/internal/models"
+	"github.com/google/uuid"
+)
+
 
 type AssetStore interface {
-	Get(userID string) []models.Asset
-	Add(userID string, asset models.Asset)
-	Remove(userID, assetID string) bool
-	EditDescription(userID, assetID, newDesc string) bool
+	Get(userID uuid.UUID) []models.Asset
+	Add(userID uuid.UUID, asset models.Asset)
+	Remove(userID uuid.UUID, assetID string) bool
+	EditDescription(userID uuid.UUID, assetID, newDesc string) bool
 
-	GetFavourites(userID string) []models.Favourite
-	AddFavourite(userID, assetID, assetType string) bool
-	RemoveFavourite(userID, assetID string) bool
+	GetFavourites(userID uuid.UUID) []models.Favourite
+	AddFavourite(userID uuid.UUID, assetID, assetType string) bool
+	RemoveFavourite(userID uuid.UUID, assetID string) bool
 }
+

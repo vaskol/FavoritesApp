@@ -1,27 +1,50 @@
 package storage
 
 import (
+
 	"assetsApp/internal/models"
+
 	"log"
+
 	"sync"
+
+
+
+	"github.com/google/uuid"
+
 )
 
+
+
+
+
 type MemoryStore struct {
+
 	mu         sync.RWMutex
-	store      map[string][]models.Asset
-	favourites map[string][]string
+
+	store      map[uuid.UUID][]models.Asset
+
+	favourites map[uuid.UUID][]string
+
 }
 
+
+
 func NewMemoryStore() *MemoryStore {
+
 	return &MemoryStore{
-		store:      make(map[string][]models.Asset),
-		favourites: make(map[string][]string),
+
+		store:      make(map[uuid.UUID][]models.Asset),
+
+		favourites: make(map[uuid.UUID][]string),
+
 	}
+
 }
 
 // Add, Get, Remove, EditDescription for Assets
-func (m *MemoryStore) Get(userID string) []models.Asset {
-	log.Printf("Storage: Get called for user %s", userID)
+func (m *MemoryStore) Get(userID uuid.UUID) []models.Asset {
+	log.Printf("Storage: Get called for user %v", userID)
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -30,13 +53,13 @@ func (m *MemoryStore) Get(userID string) []models.Asset {
 	return assets
 }
 
-func (m *MemoryStore) Add(userID string, asset models.Asset) {
-	log.Printf("Storage: Add called for user %s", userID)
+func (m *MemoryStore) Add(userID uuid.UUID, asset models.Asset) {
+	log.Printf("Storage: Add called for user %v", userID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for _, a := range m.store[userID] {
 		if a.GetID() == asset.GetID() {
-			log.Printf("Storage: Add called for user %s, asset %s already exists", userID, asset.GetID())
+			log.Printf("Storage: Add called for user %v, asset %s already exists", userID, asset.GetID())
 			// already exists, ignore or return an error
 			return
 		}
@@ -44,8 +67,8 @@ func (m *MemoryStore) Add(userID string, asset models.Asset) {
 	m.store[userID] = append(m.store[userID], asset)
 }
 
-func (m *MemoryStore) Remove(userID, assetID string) bool {
-	log.Printf("Storage: Remove called for user %s, asset %s", userID, assetID)
+func (m *MemoryStore) Remove(userID uuid.UUID, assetID string) bool {
+	log.Printf("Storage: Remove called for user %v, asset %s", userID, assetID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	assets, ok := m.store[userID]
@@ -61,8 +84,8 @@ func (m *MemoryStore) Remove(userID, assetID string) bool {
 	return false
 }
 
-func (m *MemoryStore) EditDescription(userID, assetID, desc string) bool {
-	log.Printf("Storage: EditDescription called for user %s, asset %s", userID, assetID)
+func (m *MemoryStore) EditDescription(userID uuid.UUID, assetID, desc string) bool {
+	log.Printf("Storage: EditDescription called for user %v, asset %s", userID, assetID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	assets, ok := m.store[userID]
@@ -80,8 +103,8 @@ func (m *MemoryStore) EditDescription(userID, assetID, desc string) bool {
 }
 
 // Add, Get, Remove for Favourites
-func (m *MemoryStore) AddFavourite(userID, assetID, assetType string) bool {
-	log.Printf("Storage: AddFavourite called for user %s, asset %s", userID, assetID)
+func (m *MemoryStore) AddFavourite(userID uuid.UUID, assetID, assetType string) bool {
+	log.Printf("Storage: AddFavourite called for user %v, asset %s", userID, assetID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -94,8 +117,8 @@ func (m *MemoryStore) AddFavourite(userID, assetID, assetType string) bool {
 	return true
 }
 
-func (m *MemoryStore) RemoveFavourite(userID, assetID string) bool {
-	log.Printf("Storage: RemoveFavourite called for user %s, asset %s", userID, assetID)
+func (m *MemoryStore) RemoveFavourite(userID uuid.UUID, assetID string) bool {
+	log.Printf("Storage: RemoveFavourite called for user %v, asset %s", userID, assetID)
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -109,8 +132,8 @@ func (m *MemoryStore) RemoveFavourite(userID, assetID string) bool {
 	return false
 }
 
-func (m *MemoryStore) GetFavourites(userID string) []models.Favourite {
-	log.Printf("Storage: GetFavourites called for user %s", userID)
+func (m *MemoryStore) GetFavourites(userID uuid.UUID) []models.Favourite {
+	log.Printf("Storage: GetFavourites called for user %v", userID)
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

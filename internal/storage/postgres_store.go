@@ -1,29 +1,50 @@
 package storage
 
 import (
+
 	"assetsApp/internal/models"
+
 	"context"
+
 	"log"
 
+
+
+	"github.com/google/uuid"
+
 	"github.com/jackc/pgx/v5/pgxpool"
+
 )
 
+
+
+
+
 type PostgresStore struct {
+
 	pool *pgxpool.Pool
+
 }
+
+
 
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
+
 	return &PostgresStore{pool: pool}
+
 }
 
+
+
 // ----------------- Asset Methods -----------------
-func (p *PostgresStore) Add(userID string, asset models.Asset) {
+
+func (p *PostgresStore) Add(userID uuid.UUID, asset models.Asset) {
 	ctx := context.Background()
 
 	// Ensure user exists
 	_, err := p.pool.Exec(ctx,
 		"INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-		userID, "User "+userID,
+		userID, "User "+userID.String(),
 	)
 	if err != nil {
 		log.Println("Failed to ensure user exists:", err)
@@ -134,7 +155,7 @@ func (p *PostgresStore) Add(userID string, asset models.Asset) {
 	}
 }
 
-func (p *PostgresStore) Get(userID string) []models.Asset {
+func (p *PostgresStore) Get(userID uuid.UUID) []models.Asset {
 	ctx := context.Background()
 	rows, err := p.pool.Query(ctx, "SELECT asset_id, asset_type FROM assets WHERE user_id=$1", userID)
 	if err != nil {
@@ -165,7 +186,7 @@ func (p *PostgresStore) Get(userID string) []models.Asset {
 	return assets
 }
 
-func (p *PostgresStore) Remove(userID, assetID string) bool {
+func (p *PostgresStore) Remove(userID uuid.UUID, assetID string) bool {
 	ctx := context.Background()
 	tx, err := p.pool.Begin(ctx)
 	if err != nil {
@@ -201,7 +222,7 @@ func (p *PostgresStore) Remove(userID, assetID string) bool {
 	return true
 }
 
-func (p *PostgresStore) EditDescription(userID, assetID, newDesc string) bool {
+func (p *PostgresStore) EditDescription(userID uuid.UUID, assetID, newDesc string) bool {
 	ctx := context.Background()
 	tx, err := p.pool.Begin(ctx)
 	if err != nil {
@@ -234,7 +255,7 @@ func (p *PostgresStore) EditDescription(userID, assetID, newDesc string) bool {
 
 // ----------------- Favourite Methods -----------------
 
-func (p *PostgresStore) AddFavourite(userID, assetID, _ string) bool {
+func (p *PostgresStore) AddFavourite(userID uuid.UUID, assetID, _ string) bool {
 	ctx := context.Background()
 
 	// Ensure user exists
@@ -264,11 +285,11 @@ func (p *PostgresStore) AddFavourite(userID, assetID, _ string) bool {
 		return false
 	}
 
-	log.Printf("Favourite added: user=%s, asset=%s, type=%s", userID, assetID, assetType)
+	log.Printf("Favourite added: user=%v, asset=%s, type=%s", userID, assetID, assetType)
 	return true
 }
 
-func (p *PostgresStore) RemoveFavourite(userID, assetID string) bool {
+func (p *PostgresStore) RemoveFavourite(userID uuid.UUID, assetID string) bool {
 	_, err := p.pool.Exec(context.Background(),
 		"DELETE FROM favourites WHERE user_id=$1 AND asset_id=$2",
 		userID, assetID,
@@ -280,7 +301,7 @@ func (p *PostgresStore) RemoveFavourite(userID, assetID string) bool {
 	return true
 }
 
-func (p *PostgresStore) GetFavourites(userID string) []models.Favourite {
+func (p *PostgresStore) GetFavourites(userID uuid.UUID) []models.Favourite {
 	ctx := context.Background()
 
 	rows, err := p.pool.Query(ctx,
@@ -291,7 +312,7 @@ func (p *PostgresStore) GetFavourites(userID string) []models.Favourite {
 	}
 	defer rows.Close()
 
-	log.Printf("Query executed for user %s", userID)
+	log.Printf("Query executed for user %v", userID)
 
 	var favs []models.Favourite
 	for rows.Next() {
@@ -367,13 +388,13 @@ func (p *PostgresStore) GetFavourites(userID string) []models.Favourite {
 			UserID: userID,
 			Asset:  asset,
 		})
-		log.Printf("Favourite appended for user %s: assetID=%s", userID, assetID)
+		log.Printf("Favourite appended for user %v: assetID=%s", userID, assetID)
 	}
 
 	if err := rows.Err(); err != nil {
 		log.Println("Row iteration error:", err)
 	}
 
-	log.Printf("GetFavourites finished for user %s, total favourites: %d", userID, len(favs))
+	log.Printf("GetFavourites finished for user %v, total favourites: %d", userID, len(favs))
 	return favs
 }

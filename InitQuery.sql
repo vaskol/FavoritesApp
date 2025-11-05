@@ -1,63 +1,50 @@
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-    id VARCHAR(50) PRIMARY KEY,   -- TODO store UUID 
-    name VARCHAR(100) NOT NULL
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255)
 );
 
--- Assets table
-CREATE TABLE IF NOT EXISTS assets (
-    asset_id VARCHAR(50) PRIMARY KEY,  
-    title TEXT NOT NULL,
+CREATE TABLE assets (
+    asset_id VARCHAR(255) PRIMARY KEY,
+    title VARCHAR(255),
     description TEXT,
-    asset_type VARCHAR(20) NOT NULL,   -- 'chart', 'insight', 'audience'
-    user_id VARCHAR(50) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    asset_type VARCHAR(50),
+    user_id UUID REFERENCES users(id)
 );
 
--- Charts
-CREATE TABLE IF NOT EXISTS charts (
-    id VARCHAR(50) PRIMARY KEY,       
-    title VARCHAR(200) NOT NULL,
+CREATE TABLE favourites (
+    user_id UUID REFERENCES users(id),
+    asset_id VARCHAR(255) REFERENCES assets(asset_id),
+    asset_type VARCHAR(50),
+    PRIMARY KEY (user_id, asset_id)
+);
+
+CREATE TABLE charts (
+    id VARCHAR(255) PRIMARY KEY,
+    title VARCHAR(255),
     description TEXT,
-    x_axis_title VARCHAR(100),
-    y_axis_title VARCHAR(100),
-    FOREIGN KEY (id) REFERENCES assets(asset_id) ON DELETE CASCADE
+    x_axis_title VARCHAR(255),
+    y_axis_title VARCHAR(255)
 );
 
--- Chart Data Points
-CREATE TABLE IF NOT EXISTS chart_data (
-    id SERIAL PRIMARY KEY,
-    chart_id VARCHAR(50) NOT NULL,
-    datapoint_code VARCHAR(50) NOT NULL,
-    value DOUBLE PRECISION NOT NULL,
-    FOREIGN KEY (chart_id) REFERENCES charts(id) ON DELETE CASCADE
+CREATE TABLE chart_data (
+    chart_id VARCHAR(255),
+    datapoint_code VARCHAR(255),
+    value NUMERIC
 );
 
--- Insights
-CREATE TABLE IF NOT EXISTS insights (
-    id VARCHAR(50) PRIMARY KEY,       
-    description TEXT,
-    FOREIGN KEY (id) REFERENCES assets(asset_id) ON DELETE CASCADE
+CREATE TABLE insights (
+    id VARCHAR(255) PRIMARY KEY,
+    description TEXT
 );
 
--- Audiences
-CREATE TABLE IF NOT EXISTS audiences (
-    id VARCHAR(50) PRIMARY KEY,       
-    gender VARCHAR(10),
-    country VARCHAR(50),
-    age_group VARCHAR(20),
+CREATE TABLE audiences (
+    id VARCHAR(255) PRIMARY KEY,
+    gender VARCHAR(50),
+    country VARCHAR(255),
+    age_group VARCHAR(50),
     social_hours INT,
     purchases INT,
-    description TEXT,
-    FOREIGN KEY (id) REFERENCES assets(asset_id) ON DELETE CASCADE
-);
-
--- Favourites (link table)
-CREATE TABLE IF NOT EXISTS favourites (
-    user_id VARCHAR(50) NOT NULL,
-    asset_id VARCHAR(50) NOT NULL,
-    asset_type VARCHAR(20) NOT NULL,
-    PRIMARY KEY (user_id, asset_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (asset_id) REFERENCES assets(asset_id) ON DELETE CASCADE
+    description TEXT
 );

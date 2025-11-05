@@ -7,14 +7,17 @@ import (
 	"log"
 
 	"assetsApp/internal/models"
+	"github.com/google/uuid"
 )
+
 
 type CachedStore struct {
 	db    AssetStore
 	cache *RedisClient
 }
+
 type cachedFavourite struct {
-	UserID    string          `json:"user_id"`
+	UserID    uuid.UUID       `json:"user_id"`
 	AssetType string          `json:"asset_type"`
 	AssetData json.RawMessage `json:"asset_data"`
 }
@@ -27,19 +30,19 @@ func NewCachedStore(db AssetStore, cache *RedisClient) *CachedStore {
 }
 
 // ----- Asset methods without caching -----
-func favsCacheKey(userID string) string {
-	return fmt.Sprintf("favourites:%s", userID)
+func favsCacheKey(userID uuid.UUID) string {
+	return fmt.Sprintf("favourites:%s", userID.String())
 }
 
-func (c *CachedStore) Get(userID string) []models.Asset {
+func (c *CachedStore) Get(userID uuid.UUID) []models.Asset {
 	return c.db.Get(userID)
 }
 
-func (c *CachedStore) Add(userID string, asset models.Asset) {
+func (c *CachedStore) Add(userID uuid.UUID, asset models.Asset) {
 	c.db.Add(userID, asset)
 }
 
-func (c *CachedStore) Remove(userID, assetID string) bool {
+func (c *CachedStore) Remove(userID uuid.UUID, assetID string) bool {
 	res := c.db.Remove(userID, assetID)
 	if res && c.cache != nil {
 		_ = c.cache.Del(context.Background(), favsCacheKey(userID))
@@ -47,7 +50,7 @@ func (c *CachedStore) Remove(userID, assetID string) bool {
 	return res
 }
 
-func (c *CachedStore) EditDescription(userID, assetID, newDesc string) bool {
+func (c *CachedStore) EditDescription(userID uuid.UUID, assetID, newDesc string) bool {
 	res := c.db.EditDescription(userID, assetID, newDesc)
 	if res && c.cache != nil {
 		_ = c.cache.Del(context.Background(), favsCacheKey(userID))
@@ -57,12 +60,12 @@ func (c *CachedStore) EditDescription(userID, assetID, newDesc string) bool {
 
 // ----- Favourites with caching -----
 
-func (c *CachedStore) GetFavourites(userID string) []models.Favourite {
+func (c *CachedStore) GetFavourites(userID uuid.UUID) []models.Favourite {
 	ctx := context.Background()
 
 	if c.cache != nil {
 		if cached, err := c.cache.Get(ctx, favsCacheKey(userID)); err == nil && cached != "" {
-			fmt.Printf("cached_store: cache hit for favourites of user %s\n", userID)
+			fmt.Printf("cached_store: cache hit for favourites of user %v\n", userID)
 
 			var cachedFavs []cachedFavourite
 			if err := json.Unmarshal([]byte(cached), &cachedFavs); err == nil {
@@ -95,7 +98,7 @@ func (c *CachedStore) GetFavourites(userID string) []models.Favourite {
 				}
 				return favs
 			}
-			log.Printf("cached_store: failed to unmarshal favourites cache for user %s: %v", userID, err)
+			log.Printf("cached_store: failed to unmarshal favourites cache for user %v: %v", userID, err)
 		}
 	}
 
@@ -132,7 +135,7 @@ func (c *CachedStore) GetFavourites(userID string) []models.Favourite {
 	return favs
 }
 
-func (c *CachedStore) AddFavourite(userID, assetID, assetType string) bool {
+func (c *CachedStore) AddFavourite(userID uuid.UUID, assetID, assetType string) bool {
 	res := c.db.AddFavourite(userID, assetID, assetType)
 	if res && c.cache != nil {
 		_ = c.cache.Del(context.Background(), favsCacheKey(userID))
@@ -140,10 +143,11 @@ func (c *CachedStore) AddFavourite(userID, assetID, assetType string) bool {
 	return res
 }
 
-func (c *CachedStore) RemoveFavourite(userID, assetID string) bool {
+func (c *CachedStore) RemoveFavourite(userID uuid.UUID, assetID string) bool {
 	res := c.db.RemoveFavourite(userID, assetID)
 	if res && c.cache != nil {
 		_ = c.cache.Del(context.Background(), favsCacheKey(userID))
 	}
 	return res
 }
+
