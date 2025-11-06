@@ -42,7 +42,7 @@ func (h *AssetHandler) AddAsset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
-	log.Printf("AddAsset called for user %v", userID)
+	// log.Printf("AddAsset called for user %v", userID)
 
 	var body map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -55,7 +55,7 @@ func (h *AssetHandler) AddAsset(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Asset type required", http.StatusBadRequest)
 		return
 	}
-	log.Printf("Adding asset of type %s for user %v", assetType, userID)
+	// log.Printf("Adding asset of type %s for user %v", assetType, userID)
 
 	var asset models.Asset
 

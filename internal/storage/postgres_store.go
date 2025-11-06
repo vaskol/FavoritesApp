@@ -156,11 +156,52 @@ func (p *PostgresStore) Get(userID uuid.UUID) []models.Asset {
 		var asset models.Asset
 		switch assetType {
 		case "chart":
-			asset = &models.Chart{ID: assetID}
+			var c models.Chart
+			err := p.pool.QueryRow(ctx, `
+				SELECT id, title, description, x_axis_title, y_axis_title 
+				FROM charts WHERE id=$1`, assetID).Scan(&c.ID, &c.Title, &c.Description, &c.XAxisTitle, &c.YAxisTitle)
+			if err != nil {
+				log.Println("Failed to fetch chart:", err)
+				continue
+			}
+
+			// Fetch chart data
+			dataRows, err := p.pool.Query(ctx, `SELECT datapoint_code, value FROM chart_data WHERE chart_id=$1`, assetID)
+			if err != nil {
+				log.Println("Failed to fetch chart data:", err)
+			} else {
+				defer dataRows.Close()
+				for dataRows.Next() {
+					var dp models.ChartData
+					if err := dataRows.Scan(&dp.DatapointCode, &dp.Value); err != nil {
+						log.Println("Failed to scan chart data row:", err)
+						continue
+					}
+					c.Data = append(c.Data, dp)
+				}
+			}
+			asset = &c
+
 		case "insight":
-			asset = &models.Insight{ID: assetID}
+			var i models.Insight
+			err := p.pool.QueryRow(ctx, `SELECT id, description FROM insights WHERE id=$1`, assetID).
+				Scan(&i.ID, &i.Description)
+			if err != nil {
+				log.Println("Failed to fetch insight:", err)
+				continue
+			}
+			asset = &i
+
 		case "audience":
-			asset = &models.Audience{ID: assetID}
+			var a models.Audience
+			err := p.pool.QueryRow(ctx, `
+				SELECT id, gender, country, age_group, social_hours, purchases, description 
+				FROM audiences WHERE id=$1`, assetID).Scan(&a.ID, &a.Gender, &a.Country, &a.AgeGroup, &a.SocialHours, &a.Purchases, &a.Description)
+			if err != nil {
+				log.Println("Failed to fetch audience:", err)
+				continue
+			}
+			asset = &a
 		}
 		assets = append(assets, asset)
 	}

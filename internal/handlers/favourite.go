@@ -3,7 +3,6 @@ package handlers
 import (
 	favouriteServices "assetsApp/internal/services/favourite"
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -47,8 +46,6 @@ func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	log.Printf("Received assetType: %s", body.AssetType)
 
 	if !h.service.AddFavourite(userID, assetID, body.AssetType) {
 		http.Error(w, "Could not add favourite", http.StatusNotFound)
