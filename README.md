@@ -9,8 +9,6 @@ This is a backend application for managing user assets and favorites. It allows 
 - Ability to mark assets as favorites
 - PostgreSQL for data persistence
 
-## Installation
-
 ### Prerequisites
 
 - Go (version 1.22 or higher)
@@ -18,8 +16,6 @@ This is a backend application for managing user assets and favorites. It allows 
 - Docker (for running PostgreSQL and Redis)
 
 - Redis
-
-
 
 ### Steps
 
