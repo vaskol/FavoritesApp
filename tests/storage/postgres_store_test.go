@@ -183,9 +183,12 @@ func TestPostgresStore_EditDescription(t *testing.T) {
 	edited := store.EditDescription(userID, "chart1", "New Description")
 	assert.True(t, edited)
 
-	// Verification of the change requires a Get method that returns the full asset details,
-	// which is not implemented in the current store interface.
-	// This test ensures the EditDescription method executes without error.
+	assets := store.Get(userID)
+	assert.Len(t, assets, 1)
+
+	retrievedChart, ok := assets[0].(*models.Chart)
+	assert.True(t, ok)
+	assert.Equal(t, "New Description", retrievedChart.Description)
 }
 
 func TestPostgresStore_AddAndGetFavourites(t *testing.T) {

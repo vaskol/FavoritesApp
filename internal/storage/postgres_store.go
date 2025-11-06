@@ -253,18 +253,37 @@ func (p *PostgresStore) EditDescription(userID uuid.UUID, assetID, newDesc strin
 	}
 	defer tx.Rollback(ctx)
 
-	statements := []string{
-		"UPDATE charts SET description=$1 WHERE id=$2",
-		"UPDATE insights SET description=$1 WHERE id=$2",
-		"UPDATE audiences SET description=$1 WHERE id=$2",
-		"UPDATE assets SET description=$1 WHERE asset_id=$2",
+	// First, get the asset type
+	var assetType string
+	err = tx.QueryRow(ctx, "SELECT asset_type FROM assets WHERE asset_id=$1 AND user_id=$2", assetID, userID).Scan(&assetType)
+	if err != nil {
+		log.Println("Failed to find asset for user:", err)
+		return false
 	}
 
-	for _, stmt := range statements {
-		if _, err := tx.Exec(ctx, stmt, newDesc, assetID); err != nil {
-			log.Println("Failed to update description:", err)
-			return false
-		}
+	// Update the specific asset table
+	var stmt string
+	switch assetType {
+	case "chart":
+		stmt = "UPDATE charts SET description=$1 WHERE id=$2"
+	case "insight":
+		stmt = "UPDATE insights SET description=$1 WHERE id=$2"
+	case "audience":
+		stmt = "UPDATE audiences SET description=$1 WHERE id=$2"
+	default:
+		log.Println("Unknown asset type:", assetType)
+		return false
+	}
+
+	if _, err := tx.Exec(ctx, stmt, newDesc, assetID); err != nil {
+		log.Println("Failed to update description in specific table:", err)
+		return false
+	}
+
+	// Also update the main assets table
+	if _, err := tx.Exec(ctx, "UPDATE assets SET description=$1 WHERE asset_id=$2", newDesc, assetID); err != nil {
+		log.Println("Failed to update description in assets table:", err)
+		return false
 	}
 
 	if err := tx.Commit(ctx); err != nil {
