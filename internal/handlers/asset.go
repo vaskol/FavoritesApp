@@ -62,13 +62,15 @@ func (h *AssetHandler) AddAsset(w http.ResponseWriter, r *http.Request) {
 	switch assetType {
 	case "chart":
 		data := []models.ChartData{}
-		if d, ok := body["data"].([]interface{}); ok {
-			for _, item := range d {
-				m := item.(map[string]interface{})
-				data = append(data, models.ChartData{
-					DatapointCode: m["datapoint_code"].(string),
-					Value:         m["value"].(float64),
-				})
+		if body["data"] != nil {
+			if d, ok := body["data"].([]interface{}); ok {
+				for _, item := range d {
+					m := item.(map[string]interface{})
+					data = append(data, models.ChartData{
+						DatapointCode: m["datapoint_code"].(string),
+						Value:         m["value"].(float64),
+					})
+				}
 			}
 		}
 		a := &models.Chart{

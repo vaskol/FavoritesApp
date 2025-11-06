@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"assetsApp/internal/models"
 	favouriteServices "assetsApp/internal/services/favourite"
 	"encoding/json"
 	"net/http"
@@ -25,6 +26,10 @@ func (h *FavouriteHandler) GetFavourites(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	favs := h.service.GetFavourites(userID)
+	if favs == nil {
+		json.NewEncoder(w).Encode([]models.Favourite{})
+		return
+	}
 	json.NewEncoder(w).Encode(favs)
 }
 
