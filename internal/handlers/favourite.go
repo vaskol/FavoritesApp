@@ -51,7 +51,7 @@ func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) 
 	log.Printf("Received assetType: %s", body.AssetType)
 
 	if !h.service.AddFavourite(userID, assetID, body.AssetType) {
-		http.Error(w, "Could not add favourite", http.StatusInternalServerError)
+		http.Error(w, "Could not add favourite", http.StatusNotFound)
 		return
 	}
 

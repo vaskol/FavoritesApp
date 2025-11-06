@@ -143,3 +143,96 @@ func TestAssetHandler_RemoveAsset(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 }
+
+func TestAssetHandler_GetAssets_InvalidUserID(t *testing.T) {
+	handler := handlers.NewAssetHandler(nil)
+
+	req, err := http.NewRequest("GET", "/users/invalid-uuid/assets", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	router := mux.NewRouter()
+	router.HandleFunc("/users/{userId}/assets", handler.GetAssets).Methods("GET")
+	router.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestAssetHandler_AddAsset_InvalidBody(t *testing.T) {
+	userID := uuid.New()
+	handler := handlers.NewAssetHandler(nil)
+
+	req, err := http.NewRequest("POST", "/users/"+userID.String()+"/assets", bytes.NewBuffer([]byte("invalid json")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	router := mux.NewRouter()
+	router.HandleFunc("/users/{userId}/assets", handler.AddAsset).Methods("POST")
+	router.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
+	}
+}
+
+func TestAssetHandler_EditAsset_NotFound(t *testing.T) {
+	userID := uuid.New()
+	assetID := uuid.New().String()
+	mockStore := &mocks.MockAssetStore{
+		EditDescriptionFunc: func(uid uuid.UUID, aid string, description string) bool {
+			return false // Simulate not found
+		},
+	}
+	service := assetServices.NewAssetService(mockStore)
+	handler := handlers.NewAssetHandler(service)
+
+	editBody := map[string]string{"description": "New Description"}
+	body, _ := json.Marshal(editBody)
+
+	req, err := http.NewRequest("PUT", "/users/"+userID.String()+"/assets/"+assetID, bytes.NewBuffer(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	router := mux.NewRouter()
+	router.HandleFunc("/users/{userId}/assets/{assetId}", handler.EditAsset).Methods("PUT")
+	router.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+	}
+}
+
+func TestAssetHandler_RemoveAsset_NotFound(t *testing.T) {
+	userID := uuid.New()
+	assetID := uuid.New().String()
+	mockStore := &mocks.MockAssetStore{
+		RemoveFunc: func(uid uuid.UUID, aid string) bool {
+			return false // Simulate not found
+		},
+	}
+	service := assetServices.NewAssetService(mockStore)
+	handler := handlers.NewAssetHandler(service)
+
+	req, err := http.NewRequest("DELETE", "/users/"+userID.String()+"/assets/"+assetID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	router := mux.NewRouter()
+	router.HandleFunc("/users/{userId}/assets/{assetId}", handler.RemoveAsset).Methods("DELETE")
+	router.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusNotFound {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusNotFound)
+	}
+}
+
