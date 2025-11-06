@@ -1,61 +1,32 @@
 package handlers
 
 import (
-
 	favouriteServices "assetsApp/internal/services/favourite"
-
 	"encoding/json"
-
 	"log"
-
 	"net/http"
 
-
-
 	"github.com/google/uuid"
-
 	"github.com/gorilla/mux"
-
 )
 
-
-
-
-
 type FavouriteHandler struct {
-
 	service *favouriteServices.FavouriteService
-
 }
-
-
 
 func NewFavouriteHandler(service *favouriteServices.FavouriteService) *FavouriteHandler {
-
 	return &FavouriteHandler{service: service}
-
 }
 
-
-
 func (h *FavouriteHandler) GetFavourites(w http.ResponseWriter, r *http.Request) {
-
 	userIDStr := mux.Vars(r)["userId"]
-
 	userID, err := uuid.Parse(userIDStr)
-
 	if err != nil {
-
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-
 		return
-
 	}
-
 	favs := h.service.GetFavourites(userID)
-
 	json.NewEncoder(w).Encode(favs)
-
 }
 
 func (h *FavouriteHandler) AddFavourite(w http.ResponseWriter, r *http.Request) {

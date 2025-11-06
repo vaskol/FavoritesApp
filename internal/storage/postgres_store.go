@@ -1,40 +1,21 @@
 package storage
 
 import (
-
 	"assetsApp/internal/models"
-
 	"context"
-
 	"log"
 
-
-
 	"github.com/google/uuid"
-
 	"github.com/jackc/pgx/v5/pgxpool"
-
 )
 
-
-
-
-
 type PostgresStore struct {
-
 	pool *pgxpool.Pool
-
 }
-
-
 
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
-
 	return &PostgresStore{pool: pool}
-
 }
-
-
 
 // ----------------- Asset Methods -----------------
 

@@ -7,9 +7,9 @@ import (
 	"log"
 
 	"assetsApp/internal/models"
+
 	"github.com/google/uuid"
 )
-
 
 type CachedStore struct {
 	db    AssetStore
@@ -150,4 +150,3 @@ func (c *CachedStore) RemoveFavourite(userID uuid.UUID, assetID string) bool {
 	}
 	return res
 }
-

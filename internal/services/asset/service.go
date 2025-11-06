@@ -3,9 +3,9 @@ package assetServices
 import (
 	"assetsApp/internal/models"
 	"assetsApp/internal/storage"
+
 	"github.com/google/uuid"
 )
-
 
 type AssetService struct {
 	store storage.AssetStore
@@ -30,4 +30,3 @@ func (s *AssetService) RemoveAsset(userID uuid.UUID, assetID string) bool {
 func (s *AssetService) EditDescription(userID uuid.UUID, assetID, description string) bool {
 	return s.store.EditDescription(userID, assetID, description)
 }
-

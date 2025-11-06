@@ -1,45 +1,24 @@
 package storage
 
 import (
-
 	"assetsApp/internal/models"
-
 	"log"
-
 	"sync"
 
-
-
 	"github.com/google/uuid"
-
 )
 
-
-
-
-
 type MemoryStore struct {
-
 	mu         sync.RWMutex
-
 	store      map[uuid.UUID][]models.Asset
-
 	favourites map[uuid.UUID][]string
-
 }
 
-
-
 func NewMemoryStore() *MemoryStore {
-
 	return &MemoryStore{
-
 		store:      make(map[uuid.UUID][]models.Asset),
-
 		favourites: make(map[uuid.UUID][]string),
-
 	}
-
 }
 
 // Add, Get, Remove, EditDescription for Assets
