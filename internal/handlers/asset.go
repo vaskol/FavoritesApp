@@ -57,69 +57,16 @@ func (h *AssetHandler) AddAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	// log.Printf("Adding asset of type %s for user %v", assetType, userID)
 
-	var asset models.Asset
-
-	switch assetType {
-	case "chart":
-		data := []models.ChartData{}
-		if body["data"] != nil {
-			if d, ok := body["data"].([]interface{}); ok {
-				for _, item := range d {
-					m := item.(map[string]interface{})
-					data = append(data, models.ChartData{
-						DatapointCode: m["datapoint_code"].(string),
-						Value:         m["value"].(float64),
-					})
-				}
-			}
-		}
-		a := &models.Chart{
-			ID:          body["id"].(string),
-			Title:       body["title"].(string),
-			Description: body["description"].(string),
-			XAxisTitle:  body["x_axis_title"].(string),
-			YAxisTitle:  body["y_axis_title"].(string),
-			Data:        data,
-		}
-		asset = a
-
-	case "insight":
-		a := &models.Insight{
-			ID:          body["id"].(string),
-			Description: body["description"].(string),
-		}
-		asset = a
-
-	case "audience":
-		a := &models.Audience{
-			ID:          body["id"].(string),
-			Gender:      body["gender"].(string),
-			Country:     body["country"].(string),
-			AgeGroup:    body["age_group"].(string),
-			SocialHours: int(body["social_hours"].(float64)),
-			Purchases:   int(body["purchases"].(float64)),
-			Description: body["description"].(string),
-		}
-		asset = a
-
-	default:
-		http.Error(w, "Unknown asset type", http.StatusBadRequest)
+	asset, err := models.CreateAsset(assetType, body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	h.service.AddAsset(userID, asset)
 	w.WriteHeader(http.StatusCreated)
 
-	switch a := asset.(type) {
-	case *models.Chart:
-		json.NewEncoder(w).Encode(a)
-	case *models.Insight:
-		json.NewEncoder(w).Encode(a)
-	case *models.Audience:
-		json.NewEncoder(w).Encode(a)
-	default:
-		http.Error(w, "Unknown asset type", http.StatusInternalServerError)
-	}
+	json.NewEncoder(w).Encode(asset)
 }
 
 func (h *AssetHandler) RemoveAsset(w http.ResponseWriter, r *http.Request) {
