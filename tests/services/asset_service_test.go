@@ -1,4 +1,3 @@
-
 package services_test
 
 import (
@@ -81,5 +80,38 @@ func TestAssetService_RemoveAsset(t *testing.T) {
 
 	if !service.RemoveAsset(userID, assetID) {
 		t.Error("RemoveAsset returned false")
+	}
+}
+
+func TestAssetService_EditNonExistentAsset(t *testing.T) {
+	userID := uuid.New()
+	assetID := "non-existent-asset"
+	description := "New Description"
+	mockStore := &mocks.MockAssetStore{
+		EditDescriptionFunc: func(uid uuid.UUID, aid string, desc string) bool {
+			return false // Simulate asset not found
+		},
+	}
+
+	service := assetServices.NewAssetService(mockStore)
+
+	if service.EditDescription(userID, assetID, description) {
+		t.Error("EditDescription returned true for non-existent asset")
+	}
+}
+
+func TestAssetService_RemoveNonExistentAsset(t *testing.T) {
+	userID := uuid.New()
+	assetID := "non-existent-asset"
+	mockStore := &mocks.MockAssetStore{
+		RemoveFunc: func(uid uuid.UUID, aid string) bool {
+			return false // Simulate asset not found
+		},
+	}
+
+	service := assetServices.NewAssetService(mockStore)
+
+	if service.RemoveAsset(userID, assetID) {
+		t.Error("RemoveAsset returned true for non-existent asset")
 	}
 }

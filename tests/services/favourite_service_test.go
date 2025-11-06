@@ -61,3 +61,36 @@ func TestFavouriteService_RemoveFavourite(t *testing.T) {
 		t.Error("RemoveFavourite returned false")
 	}
 }
+
+func TestFavouriteService_AddFavouriteForNonExistentAsset(t *testing.T) {
+	userID := uuid.New()
+	assetID := "non-existent-asset"
+	assetType := "chart"
+	mockStore := &mocks.MockAssetStore{
+		AddFavouriteFunc: func(uid uuid.UUID, aid string, atype string) bool {
+			return false // Simulate asset not found
+		},
+	}
+
+	service := favouriteServices.NewFavouriteService(mockStore)
+
+	if service.AddFavourite(userID, assetID, assetType) {
+		t.Error("AddFavourite returned true for non-existent asset")
+	}
+}
+
+func TestFavouriteService_RemoveNonExistentFavourite(t *testing.T) {
+	userID := uuid.New()
+	assetID := "non-existent-asset"
+	mockStore := &mocks.MockAssetStore{
+		RemoveFavouriteFunc: func(uid uuid.UUID, aid string) bool {
+			return false // Simulate favourite not found
+		},
+	}
+
+	service := favouriteServices.NewFavouriteService(mockStore)
+
+	if service.RemoveFavourite(userID, assetID) {
+		t.Error("RemoveFavourite returned true for non-existent favourite")
+	}
+}
